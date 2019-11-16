@@ -103,13 +103,13 @@
    {:classname   "org.postgresql.Driver"
     :subprotocol "postgresql"
     :subname     "//localhost:5432/herodotus"
-    :user        "herodotus"}))
+    :user        "herodotus"})
+  (let [app-config (config)]
+    (reset! webhook-url (get app-config :webhook-url))
+    (reset! token (get app-config :token))))
 
 (defn -main
   "Initialise config and server."
   [& args]
-  (let [app-config (config)]
-    (reset! webhook-url (get app-config :webhook-url))
-    (reset! token (get app-config :token)))
   (init-app)
   (run-jetty handler {:port 8990}))
