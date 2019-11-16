@@ -1,11 +1,15 @@
 (ns slack-downloader.core
-  (:use ring.adapter.jetty)
   (:require
+   [ring.adapter.jetty :as jetty]
+   [compojure.core :refer :all]
+   [compojure.route :as route]
+   [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
    [clojure.edn :as edn]
    [toucan.db :as db]
    [toucan.models :as models]
    [environ.core :refer [env]]
-   [java-time :exclude [range iterate format max min] :as time])
+   [java-time :exclude [range iterate format max min] :as time]
+   [drawbridge.core])
   (:import (java.sql Timestamp)
            (com.github.seratch.jslack Slack)
            (com.github.seratch.jslack.api.webhook Payload
@@ -15,6 +19,7 @@
                                                                    ChannelsHistoryRequest))
   (:gen-class))
 
+(def api-port (atom 8990))
 (def webhook-url (atom ""))
 (def token (atom ""))
 
@@ -88,11 +93,23 @@
 (defn handler [req]
   {:status 200
    :headers {"Content-Type" "text/plain"}
-   :body (str "<h1>The requested uri is " (get req :uri) " </h1>")})
+   :body (str "<h1>The requested uri is " (str req) " </h1>")})
+
+(defroutes herodotus-routes
+  (GET "/" [] "Welcome to your friendly Slack historian.")
+  (POST "/snapshot" [] "Snapshot")
+  (let [nrepl-handler (drawbridge.core/ring-handler)]
+    (ANY "/repl" request (nrepl-handler request))))
+
+(def herodotus
+  (wrap-defaults herodotus-routes api-defaults))
 
 (defn config-from-env []
-  {:webhook-url (or (env :webhook-url) "")
-   :token (or (env :token) "")})
+  {:api-port (or (env :api-port) 80)
+   :webhook-url (or (env :webhook-url) "")
+   :token (or (env :token) "")
+   :repl-user (or (env :repl-user) "repl")
+   :repl-pass (or (env :repl-pass) "repl")})
 
 (defn config []
   (merge (config-from-env)
@@ -104,12 +121,15 @@
     :subprotocol "postgresql"
     :subname     "//localhost:5432/herodotus"
     :user        "herodotus"})
+
   (let [app-config (config)]
+    (reset! api-port (get app-config :api-port))
     (reset! webhook-url (get app-config :webhook-url))
-    (reset! token (get app-config :token))))
+    (reset! token (get app-config :token))
+    config))
 
 (defn -main
-  "Initialise config and server."
+  "Initialise config and then start the server."
   [& args]
   (init-app)
-  (run-jetty handler {:port 8990}))
+  (jetty/run-jetty handler {:port (deref api-port)}))
