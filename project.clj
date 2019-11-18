@@ -5,10 +5,12 @@
   :license {:name "GPL-3.0-or-later"
             :url "https://www.gnu.org/licenses/gpl-3.0-standalone.html"}
   :dependencies [[org.clojure/clojure "1.10.0"]
+                 [org.clojure/tools.logging "0.5.0"]
                  [ring/ring-core "1.7.1"]
                  [ring/ring-defaults "0.3.2"]
                  [ring/ring-jetty-adapter "1.7.1"]
                  [compojure "1.6.1"]
+                 [buddy/buddy-auth "2.2.0"]
                  [environ/environ.core "0.3.1"]
                  [clojure.java-time "0.3.2"]
                  [toucan "1.15.0"]
