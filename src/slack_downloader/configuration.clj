@@ -4,13 +4,14 @@
    [environ.core :refer [env]]
    [slack-downloader.storage :refer [storage-init]]))
 
-(def api-port (atom 8990))
-(def webhook-url (atom ""))
-(def token (atom ""))
-(def repl-username (atom "repl"))
-(def repl-password (atom "repl"))
+(def api-port (atom 8990))        ;; Web server API port
+(def webhook-url (atom ""))       ;; The URL to post messagese to #herodotus
+(def token (atom ""))             ;; Slack security token
+(def repl-username (atom "repl")) ;; Username for authentication to the remote repl
+(def repl-password (atom "repl")) ;; Password for authentication to the remote repl
 
 (defn config-from-env []
+  "Load configuration from environment variables."
   {:api-port (or (env :api-port) 80)
    :webhook-url (or (env :webhook-url) "")
    :token (or (env :token) "")
@@ -18,6 +19,7 @@
    :repl-password (or (env :repl-pass) "repl")})
 
 (defn config []
+  "Set up application configuration."
   (storage-init)
   (let [app-config (merge (config-from-env)
                           (edn/read-string

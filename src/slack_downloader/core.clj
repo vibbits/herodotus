@@ -25,12 +25,14 @@
 (def snapshot-requests (atom []))
 
 (defn post-message [msg]
+  "Send a message to the #Herodotus channel."
   (let [slack (Slack/getInstance)
         payload (doto (Payload/builder)
                   (.text msg))]
     (.send slack @config/webhook-url (.build payload))))
 
 (defn channels []
+  "Get a mapping from public channel names to identifiers."
   (let [slack (Slack/getInstance)
         req (doto (ChannelsListRequest/builder)
               (.limit (int 50))
@@ -40,6 +42,7 @@
                                                    (.build req)))))))
 
 (defn channel-history [channel req]
+  "Execute a channel history request. <req> should be a request builder."
   (let [slack (Slack/getInstance)]
     (map #(hash-map
            :ts (store/slack-ts->timestamp (.getTs %)),
@@ -52,6 +55,7 @@
                                          (.build req))))))
 
 (defn channel-history-after [channel ts]
+  "Get all messages to a given channel after (not-inclusive) a given timestamp."
   (let [req (doto (ChannelsHistoryRequest/builder)
               (.channel channel)
               (.oldest ts)
@@ -59,20 +63,24 @@
     (channel-history channel req)))
 
 (defn channel-history-for [channel]
+  "Get the entire history of a given channel."
   (let [req (doto (ChannelsHistoryRequest/builder)
               (.channel channel))]
     (channel-history channel req)))
 
 (defn snapshot-channel [channel]
+  "Create a snapshot for a given channel."
   (let [last-snapshot (get (store/most-recent-snapshot channel) :slack-ts)
         history (channel-history-after channel last-snapshot)]
     (map store/message history)))
 
 (defn snapshot-all-channels []
+  "Create a snapshot for all public channels."
   (let [ch (channels)]
     (map #(snapshot-channel (get ch %)) (keys ch))))
 
 (defn cmd-snapshot-handler [req]
+  "HTTP API handler function for the slack /snapshot slash-command."
   (swap! snapshot-requests conj req)
   (let [channel-name (:text (:params req))
         channel (get (channels) channel-name)]
@@ -86,6 +94,7 @@
                :body (str "I created a snapshot of " channel-name " containing " size " messages.")}))))
 
 (defn repl-authenticated? [req {:keys [username password]}]
+  "Check user authentication."
   (and (= username @config/repl-username)
        (= password @config/repl-password)
        {:username username}))
