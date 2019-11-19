@@ -19,7 +19,9 @@
                  [com.github.seratch/jslack-api-client "3.1.0"]
                  [org.slf4j/slf4j-simple "1.7.21"]]
   :plugins [[lein-ring "0.12.5"]
-            [nrepl/drawbridge "0.2.1"]]
+            [nrepl/drawbridge "0.2.1"]
+            [refactor-nrepl "2.5.0-SNAPSHOT"]
+            [cider/cider-nrepl "0.23.0-SNAPSHOT"]]
   :ring {:handler slack-downloader.core/herodotus}
   :main ^:skip-aot slack-downloader.core
   :target-path "target/%s"
