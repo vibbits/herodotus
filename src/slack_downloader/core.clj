@@ -86,6 +86,11 @@
   (let [ch (channels)]
     (map #(snapshot-channel (get ch %)) (keys ch))))
 
+(defn welcome
+  "A welcoming message for web browsers."
+  [req]
+  "Welcome to your friendly Slack historian.")
+
 (defn cmd-snapshot-handler
   "HTTP API handler function for the slack /snapshot slash-command."
   [req]
@@ -113,7 +118,7 @@
                        :authfn repl-authenticated?}))
 
 (defroutes herodotus-routes
-  (GET "/" [] "Welcome to your friendly Slack historian.")
+  (GET "/" [] welcome)
   (POST "/snapshot" [] cmd-snapshot-handler))
 
 (defroutes herodotus-repl-route
