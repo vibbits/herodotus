@@ -10,16 +10,18 @@
 (def repl-username (atom "repl")) ;; Username for authentication to the remote repl
 (def repl-password (atom "repl")) ;; Password for authentication to the remote repl
 
-(defn config-from-env []
+(defn config-from-env
   "Load configuration from environment variables."
+  []
   {:api-port (or (env :api-port) 80)
    :webhook-url (or (env :webhook-url) "")
    :token (or (env :token) "")
    :repl-username (or (env :repl-user) "repl")
    :repl-password (or (env :repl-pass) "repl")})
 
-(defn config []
+(defn config
   "Set up application configuration."
+  []
   (storage-init)
   (let [app-config (merge (config-from-env)
                           (edn/read-string

@@ -24,15 +24,17 @@
 
 (def snapshot-requests (atom []))
 
-(defn post-message [msg]
+(defn post-message
   "Send a message to the #Herodotus channel."
+  [msg]
   (let [slack (Slack/getInstance)
         payload (doto (Payload/builder)
                   (.text msg))]
     (.send slack @config/webhook-url (.build payload))))
 
-(defn channels []
+(defn channels
   "Get a mapping from public channel names to identifiers."
+  []
   (let [slack (Slack/getInstance)
         req (doto (ChannelsListRequest/builder)
               (.limit (int 50))
@@ -41,8 +43,9 @@
                       (.getChannels (.channelsList (.methods slack @config/token)
                                                    (.build req)))))))
 
-(defn channel-history [channel req]
+(defn channel-history
   "Execute a channel history request. <req> should be a request builder."
+  [channel req]
   (let [slack (Slack/getInstance)]
     (map #(hash-map
            :ts (store/slack-ts->timestamp (.getTs %)),
@@ -54,33 +57,38 @@
          (.getMessages (.channelsHistory (.methods slack @config/token)
                                          (.build req))))))
 
-(defn channel-history-after [channel ts]
+(defn channel-history-after
   "Get all messages to a given channel after (not-inclusive) a given timestamp."
+  [channel ts]
   (let [req (doto (ChannelsHistoryRequest/builder)
               (.channel channel)
               (.oldest ts)
               (.inclusive false))]
     (channel-history channel req)))
 
-(defn channel-history-for [channel]
+(defn channel-history-for
   "Get the entire history of a given channel."
+  [channel]
   (let [req (doto (ChannelsHistoryRequest/builder)
               (.channel channel))]
     (channel-history channel req)))
 
-(defn snapshot-channel [channel]
+(defn snapshot-channel
   "Create a snapshot for a given channel."
+  [channel]
   (let [last-snapshot (get (store/most-recent-snapshot channel) :slack-ts)
         history (channel-history-after channel last-snapshot)]
     (map store/message history)))
 
-(defn snapshot-all-channels []
+(defn snapshot-all-channels
   "Create a snapshot for all public channels."
+  []
   (let [ch (channels)]
     (map #(snapshot-channel (get ch %)) (keys ch))))
 
-(defn cmd-snapshot-handler [req]
+(defn cmd-snapshot-handler
   "HTTP API handler function for the slack /snapshot slash-command."
+  [req]
   (swap! snapshot-requests conj req)
   (let [channel-name (:text (:params req))
         channel (get (channels) channel-name)]
@@ -93,8 +101,9 @@
               {:status 200,
                :body (str "I created a snapshot of " channel-name " containing " size " messages.")}))))
 
-(defn repl-authenticated? [req {:keys [username password]}]
+(defn repl-authenticated?
   "Check user authentication."
+  [req {:keys [username password]}]
   (and (= username @config/repl-username)
        (= password @config/repl-password)
        {:username username}))
