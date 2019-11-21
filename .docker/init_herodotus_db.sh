@@ -51,9 +51,9 @@ psql -v ON_ERROR_STOP=1 --dbname herodotus <<-EOSQL
 
     CREATE TABLE attachments(
          id serial PRIMARY KEY,
-         message_id INTEGER REFERENCES messages(id),
-         identifier INTEGER NOT NULL,
-         fallback TEXT NOT NULL,
+         message_id INTEGER NOT NULL REFERENCES messages(id),
+         identifier INTEGER,
+         fallback TEXT,
          serviceurl TEXT,
          servicename TEXT,
          serviceicon TEXT,
@@ -77,8 +77,8 @@ psql -v ON_ERROR_STOP=1 --dbname herodotus <<-EOSQL
 
     CREATE TABLE reactions(
         id serial PRIMARY KEY,
-        message_id INTEGER REFERENCES messages(id),
-        user_id INTEGER REFERENCES users(id),
+        message_id INTEGER NOT NULL REFERENCES messages(id),
+        user_id INTEGER NOT NULL REFERENCES users(id),
         name TEXT NOT NULL,
         url TEXT
     );

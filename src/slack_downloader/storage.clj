@@ -1,5 +1,6 @@
 (ns slack-downloader.storage
   (:require
+   [clojure.tools.logging :as log]
    [toucan.db :as db]
    [toucan.models :as models]
    [java-time :exclude [range iterate format max min] :as time]
@@ -24,7 +25,9 @@
 (defn slack-ts->timestamp
   "Convert a slack timestamp string to a SQL timestamp."
   [ts]
-  (Timestamp. (long (* 1000 (Double. ts)))))
+  (if (nil? ts)
+    nil
+    (Timestamp. (long (* 1000 (Double. ts))))))
 
 (defn epoch-ms->slack-ts
   "Convert the number of milliseconds since the epoch to a slack timestamp"
@@ -50,13 +53,16 @@
 (defn attachment
   "Save an attachment to the database."
   [at message_id]
-  (let [a (assoc at :message_id message_id)]
+  (let [a (assoc at
+                 :message_id message_id
+                 :ts (slack-ts->timestamp (:ts at)))]
+    (log/info a)
     (db/insert! Attachment, a)))
 
 (defn reaction
   "Save a reaction to the database."
   [ren message_id]
-  (let [user_id (:id (db/select-one User {:where [:= :identifier (:uid ren)]}))
+  (let [user_id (:id (db/select-one User {:where [:= :identifier (:user_id ren)]}))
         r (assoc ren :message_id message_id :user_id user_id)]
     (db/insert! Reaction, r)))
 
@@ -73,8 +79,8 @@
                    :sender sender
                    :channel channel)]
     (let [message_id (:id (db/insert! Message, msg))]
-      (map #(attachment message_id %) attachments)
-      (map #(reaction message_id %) reactions))
+      (run! #(attachment % message_id) attachments)
+      (run! #(reaction % message_id) reactions))
     msg))
 
 (defn channel

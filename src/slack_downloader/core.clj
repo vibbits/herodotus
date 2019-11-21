@@ -110,7 +110,7 @@
                users (vec (.getUsers %))
                count (.getCount %)]
            (for [idx (range count)]
-             {:uid (get users idx)
+             {:user_id (get users idx)
               :name name
               :url url}))
         reactions)))
@@ -223,11 +223,12 @@
   []
   (store/init)
   (config/config)
-  (if (store/stat "users") (map store/user (users)))
-  (if (store/stat "channels") (map store/channel (channels)))
-  (if (store/stat "messages"))
-  ;; Check if the database contains anything. If not try to populate it.
-  ;; Set up regular checks for new messages.
+  (if (= 0 (store/stat "users")) (map store/user (users)))
+  (if (= 0 (store/stat "channels")) (map store/channel (channels)))
+  (if (= 0 (store/stat "messages"))
+    (take-while #(not= 0 %) (repeatedly #(count (snapshot-all-channels)))))
+
+  ;; TODO: Set up regular checks for new messages.
   )
 
 (defn -main
