@@ -174,6 +174,11 @@
   [req]
   "Welcome to your friendly Slack historian.")
 
+(defn cmd-source-handler
+  "HTTP API handler function for the slack /source slash-command"
+  [req]
+  "https://github.com/vibbits/herodotus")
+
 (defn cmd-snapshot-handler
   "HTTP API handler function for the slack /snapshot slash-command."
   [req]
@@ -184,7 +189,11 @@
       (= "all" channel-name) (let [size (count (snapshot-all-channels))]
                                {:status 200,
                                 :body (str "I created a snapshot of all " size " channels.")})
-      (nil? channel) {:status 404, :body (str "No channel " channel-name)}
+      (nil? channel) (let [current-channel (:channel_id (:params req))
+                           current-channel-name (:channel_name (:params req))
+                           size (count (snapshot-channel current-channel))]
+                       {:status 200
+                        :body (str "I created a snapshot of " channel-name " containing " size " messages.")})
       :else (let [size (count (snapshot-channel channel))]
               {:status 200,
                :body (str "I created a snapshot of " channel-name " containing " size " messages.")}))))
@@ -202,7 +211,8 @@
 
 (defroutes herodotus-routes
   (GET "/" [] welcome)
-  (POST "/snapshot" [] cmd-snapshot-handler))
+  (POST "/snapshot" [] cmd-snapshot-handler)
+  (POST "/source" [] cmd-source-handler))
 
 (defroutes herodotus-repl-route
   (let [nrepl-handler (drawbridge.core/ring-handler)]
