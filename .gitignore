@@ -12,4 +12,4 @@ pom.xml.asc
 .cpcache/
 .hgignore
 .hg/
-
+config.edn
