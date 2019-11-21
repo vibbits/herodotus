@@ -1,32 +1,23 @@
 # Herodotus: A Slack historian
 
-FIXME: description
+Your friendly neighbourhood Slack historian. Archives Slack data (especially messages) to a  database.
 
 ## Installation
 
-Download from http://example.com/FIXME.
+* Configuration should be in a file called `config.edn` containing the following fields:
+
+* `api-port` (the TCP port to listen on for connections)
+* `webhook-url` (The Slack provided URL for the base bot channel, e.g. herodotus)
+* `token` (API token provided by Slack on installation)
+* `repl-username` (The username for the remote repl)
+* `repl-password` (The password for the remote repl)
+* `beginning-of-history` (From when to start achiving messages)
 
 ## Usage
 
 FIXME: explanation
 
     $ java -jar slack-downloader-0.1.0-standalone.jar [args]
-
-## Options
-
-FIXME: listing of options this app accepts.
-
-## Examples
-
-...
-
-### Bugs
-
-...
-
-### Any Other Sections
-### That You Think
-### Might be Useful
 
 ## License
 
