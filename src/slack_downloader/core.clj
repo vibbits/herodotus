@@ -175,9 +175,17 @@
   "Welcome to your friendly Slack historian.")
 
 (defn cmd-source-handler
-  "HTTP API handler function for the slack /source slash-command"
+  "HTTP API handler function for the slack /source slash-command."
   [req]
-  "https://github.com/vibbits/herodotus")
+  {:status 200
+   :body "https://github.com/vibbits/herodotus"})
+
+(defn cmd-stat-handler
+  "HTTP API handler function for the slack /source slash-command."
+  [req]
+  {:status 200
+   :body (str "I have saved "
+              (store/stat "messages") " messages in total.")})
 
 (defn cmd-snapshot-handler
   "HTTP API handler function for the slack /snapshot slash-command."
@@ -193,10 +201,14 @@
                            current-channel-name (:channel_name (:params req))
                            size (count (snapshot-channel current-channel))]
                        {:status 200
-                        :body (str "I created a snapshot of " channel-name " containing " size " messages.")})
+                        :body (str "I created a snapshot of "
+                                   current-channel-name " containing "
+                                   size " messages.")})
       :else (let [size (count (snapshot-channel channel))]
               {:status 200,
-               :body (str "I created a snapshot of " channel-name " containing " size " messages.")}))))
+               :body (str "I created a snapshot of "
+                          channel-name " containing "
+                          size " messages.")}))))
 
 (defn repl-authenticated?
   "Check user authentication."
@@ -212,7 +224,8 @@
 (defroutes herodotus-routes
   (GET "/" [] welcome)
   (POST "/snapshot" [] cmd-snapshot-handler)
-  (POST "/source" [] cmd-source-handler))
+  (POST "/source" [] cmd-source-handler)
+  (POST "/stat" [] cmd-stat-handler))
 
 (defroutes herodotus-repl-route
   (let [nrepl-handler (drawbridge.core/ring-handler)]
