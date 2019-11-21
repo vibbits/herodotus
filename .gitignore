@@ -1,6 +1,7 @@
 /target
 /classes
 /checkouts
+/lib/
 profiles.clj
 pom.xml
 pom.xml.asc
@@ -8,5 +9,6 @@ pom.xml.asc
 *.class
 /.lein-*
 /.nrepl-port
+.cpcache/
 .hgignore
 .hg/
