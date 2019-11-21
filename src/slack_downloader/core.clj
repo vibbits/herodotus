@@ -8,7 +8,6 @@
    [buddy.auth :refer [authenticated?  throw-unauthorized]]
    [buddy.auth.backends.httpbasic :refer [http-basic-backend]]
    [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
-   [java-time :exclude [range iterate format max min] :as time]
    [drawbridge.core]
 
    [slack-downloader.storage :as store]
@@ -19,10 +18,12 @@
                                           WebhookResponse)
    (com.github.seratch.jslack.api.methods MethodsClient)
    (com.github.seratch.jslack.api.methods.request.channels ChannelsListRequest
-                                                           ChannelsHistoryRequest))
+                                                           ChannelsHistoryRequest)
+   (com.github.seratch.jslack.api.methods.request.users UsersListRequest))
   (:gen-class))
 
 (def snapshot-requests (atom []))
+(def message-results (atom []))
 
 (defn post-message
   "Send a message to the #Herodotus channel."
@@ -32,6 +33,15 @@
                   (.text msg))]
     (.send slack @config/webhook-url (.build payload))))
 
+(defn response->channel
+  "Extract channel data from the Java response object."
+  [response]
+  {:identifier (.getId response)
+   :name (.getName response)
+   :namenormalized (.getNameNormalized response)
+   :created (.getCreated response)
+   :creator (.getCreator response)})
+
 (defn channels
   "Get a mapping from public channel names to identifiers."
   []
@@ -39,21 +49,94 @@
         req (doto (ChannelsListRequest/builder)
               (.limit (int 50))
               (.excludeArchived true))]
-    (apply merge (map #(hash-map (.getNameNormalized %) (.getId %))
-                      (.getChannels (.channelsList (.methods slack @config/token)
-                                                   (.build req)))))))
+    (map response->channel
+         (.getChannels (.channelsList (.methods slack @config/token)
+                                      (.build req))))))
+
+(defn response->user
+  "Extract user data from the Java response object."
+  [response]
+  {:identifier (.getId response)
+   :team (.getTeamId response)
+   :name (.getName response)
+   :realname (.getRealName response)
+   :tz (.getTz response)
+   :tzlabel (.getTzLabel response)
+   :tzoffset (.getTzOffset response)})
+
+(defn users
+  "Get a list of users."
+  []
+  (let [slack (Slack/getInstance)
+        req (doto (UsersListRequest/builder)
+              (.limit (int 50)))]
+    (map response->user
+         (.getMembers (.usersList (.methods slack @config/token)
+                                  (.build req))))))
+
+(defn response->attachments
+  "Retrieve a vector of attachment alternative text from a message."
+  [attachments]
+  (map
+   #(hash-map
+     :identifier (.getId %)
+     :fallback (.getFallback %)
+     :serviceurl (.getServiceUrl %)
+     :servicename (.getServiceName %)
+     :serviceicon (.getServiceIcon %)
+     :authorname (.getAuthorName %)
+     :authorlink (.getAuthorLink %)
+     :authoricon (.getAuthorIcon %)
+     :fromurl (.getFromUrl %)
+     :originalurl (.getOriginalUrl %)
+     :title (.getTitle %)
+     :titlelink (.getTitleLink %)
+     :text (.getText %)
+     :imageurl (.getImageUrl %)
+     :videohtml (.getVideoHtml %)
+     :footer (.getFooter %)
+     :ts (.getTs %)
+     :filename (.getFilename %)
+     :mimetype (.getMimetype %)
+     :url (.getUrl %))
+   attachments))
+
+(defn response->reactions
+  "Retrieve a vector of attachment alternative text from a message."
+  [reactions]
+  (flatten
+   (map #(let [name (.getName %)
+               url (.getUrl %)
+               users (vec (.getUsers %))
+               count (.getCount %)]
+           (for [idx (range count)]
+             {:uid (get users idx)
+              :name name
+              :url url}))
+        reactions)))
+
+(defn response->message
+  "Extract message data from Java response object."
+  [response channel]
+  {:ts (store/slack-ts->timestamp (.getTs response)),
+   :type (.getType response),
+   :subtype (.getSubtype response),
+   :attachments (response->attachments (.getAttachments response)),
+   :reactions (response->reactions (.getReactions response)),
+   :slackts (.getTs response),
+   :threadts (.getThreadTs response),
+   :sender (.getUser response),
+   :team (.getTeam response)
+   :channel channel,
+   :message (.getText response)
+   :botid (.getBotId response)
+   :botlink (.getBotLink response)})
 
 (defn channel-history
   "Execute a channel history request. <req> should be a request builder."
   [channel req]
   (let [slack (Slack/getInstance)]
-    (map #(hash-map
-           :ts (store/slack-ts->timestamp (.getTs %)),
-           :slack-ts (.getTs %),
-           :thread-ts (.getThreadTs %),
-           :user (.getUser %),
-           :channel channel,
-           :text (.getText %))
+    (map #(response->message % channel)
          (.getMessages (.channelsHistory (.methods slack @config/token)
                                          (.build req))))))
 
@@ -76,15 +159,15 @@
 (defn snapshot-channel
   "Create a snapshot for a given channel."
   [channel]
-  (let [last-snapshot (get (store/most-recent-snapshot channel) :slack-ts)
+  (let [last-snapshot (get (store/most-recent-snapshot channel) :slackts)
         history (channel-history-after channel last-snapshot)]
     (map store/message history)))
 
 (defn snapshot-all-channels
   "Create a snapshot for all public channels."
   []
-  (let [ch (channels)]
-    (map #(snapshot-channel (get ch %)) (keys ch))))
+  (let [ch (map :identifier (channels))]
+    (flatten (map snapshot-channel ch))))
 
 (defn welcome
   "A welcoming message for web browsers."
@@ -135,8 +218,20 @@
         (wrap-authorization auth-backend)
         (wrap-authentication auth-backend))) api-defaults))
 
+(defn init
+  "Initialise the application."
+  []
+  (store/init)
+  (config/config)
+  (if (store/stat "users") (map store/user (users)))
+  (if (store/stat "channels") (map store/channel (channels)))
+  (if (store/stat "messages"))
+  ;; Check if the database contains anything. If not try to populate it.
+  ;; Set up regular checks for new messages.
+  )
+
 (defn -main
   "Initialise config and then start the server."
   [& args]
-  (config/config)
+  (init)
   (jetty/run-jetty herodotus {:port @config/api-port}))
