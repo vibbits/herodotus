@@ -56,7 +56,6 @@
   (let [a (assoc at
                  :message_id message_id
                  :ts (slack-ts->timestamp (:ts at)))]
-    (log/info a)
     (db/insert! Attachment, a)))
 
 (defn reaction

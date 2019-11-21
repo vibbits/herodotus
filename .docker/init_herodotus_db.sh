@@ -78,7 +78,7 @@ psql -v ON_ERROR_STOP=1 --dbname herodotus <<-EOSQL
     CREATE TABLE reactions(
         id serial PRIMARY KEY,
         message_id INTEGER NOT NULL REFERENCES messages(id),
-        user_id INTEGER NOT NULL REFERENCES users(id),
+        user_id INTEGER REFERENCES users(id),
         name TEXT NOT NULL,
         url TEXT
     );

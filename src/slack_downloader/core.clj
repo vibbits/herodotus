@@ -223,10 +223,18 @@
   []
   (store/init)
   (config/config)
-  (if (= 0 (store/stat "users")) (map store/user (users)))
-  (if (= 0 (store/stat "channels")) (map store/channel (channels)))
+  (if (= 0 (store/stat "users")) (do
+                                   (log/info "Initialising table of users.")
+                                   (run! store/user (users))))
+  (if (= 0 (store/stat "channels")) (do
+                                      (log/info "Initialising table of channels.")
+                                      (run! store/channel (channels))))
   (if (= 0 (store/stat "messages"))
-    (take-while #(not= 0 %) (repeatedly #(count (snapshot-all-channels)))))
+    (do
+      (log/info "Saving archive of available messages.")
+      (doseq [message_count (repeatedly #(count (snapshot-all-channels)))
+              :while (not= 0 message_count)]
+        (log/info "Saved " message_count))))
 
   ;; TODO: Set up regular checks for new messages.
   )
